@@ -1,53 +1,37 @@
-# backend/route/extensions_telegram/notification.py
-# probably use this to notify me if the server ever goes down
+"""
+TelegramNotifier - Example application using TelegramClient
+This is an example of how to build specific notification services on top of the generic TelegramClient
+"""
 
 import os
 import logging
-from typing import Optional
-from aiogram import Bot, types
+from typing import Optional, Dict, Any
+from .telegram_client import TelegramClient
 import asyncio
 from dotenv import load_dotenv
 
 load_dotenv()
 
+
 class TelegramNotifier:
+    """
+    Example notification service built on top of TelegramClient
+    This shows how to create specialized notification apps
+    """
+    
     def __init__(self):
-        # Initialize logger
-        self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.setLevel(logging.INFO)
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter(
-            "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-        )
-        handler.setFormatter(formatter)
-        if not self.logger.handlers:
-            self.logger.addHandler(handler)
-
-        # Load environment variables
-        self.TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-        self.TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-
-        # Validate environment variables
-        if not self.TELEGRAM_BOT_TOKEN or not self.TELEGRAM_CHAT_ID:
-            self.logger.error("Telegram credentials are not set in environment variables.")
-            raise ValueError("Missing Telegram configuration.")
-
-        # Initialize the bot
-        self.bot = Bot(token=self.TELEGRAM_BOT_TOKEN)
-        self.logger.info("TelegramNotifier initialized successfully.")
-
-    async def send_message(self, message: str) -> None:
-        self.logger.debug(f"Sending Telegram message: {message}")
+        # Initialize the generic Telegram client
+        self.client = TelegramClient()
+        self.logger = self.client.logger
+        
+    async def send_message(self, message: str, **kwargs) -> bool:
+        """Send a message using the underlying client"""
         try:
-            await self.bot.send_message(
-                chat_id=self.TELEGRAM_CHAT_ID,
-                text=message,
-                parse_mode="Markdown"  # Use string literals instead of types.ParseMode
-            )
-            self.logger.info("Telegram notification sent successfully.")
+            await self.client.send_message(message, **kwargs)
+            return True
         except Exception as e:
-            self.logger.error(f"Failed to send Telegram notification: {e}")
-            raise
+            self.logger.error(f"Failed to send notification: {e}")
+            return False
 
 # TODO: make waitlist an enum allow other enums
 
@@ -84,7 +68,8 @@ class TelegramNotifier:
         await self.send_message(message)
 
     async def close(self) -> None:
-        await self.bot.session.close()
+        """Close the underlying client"""
+        await self.client.close()
 
 if __name__ == "__main__":
     async def main():
